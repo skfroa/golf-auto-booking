@@ -1,0 +1,42 @@
+const { kv } = require('@vercel/kv');
+
+module.exports = async function handler(req, res) {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  if (req.method === 'OPTIONS') return res.status(200).end();
+
+  if (req.method === 'GET') {
+    const bookings = await kv.get('bookings') || [];
+    return res.json(bookings);
+  }
+
+  if (req.method === 'POST') {
+    const { club, course, date, time, openDate, openTime, memo } = req.body;
+    if (!club || !date || !time || !openDate) {
+      return res.status(400).json({ error: '필수 항목 누락' });
+    }
+    const bookings = await kv.get('bookings') || [];
+    const booking = {
+      id: Date.now(),
+      club, course, date, time,
+      openDate, openTime: openTime || '10:00',
+      memo: memo || '',
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+    };
+    bookings.push(booking);
+    await kv.set('bookings', bookings);
+    return res.status(201).json(booking);
+  }
+
+  if (req.method === 'DELETE') {
+    const { id } = req.query;
+    const bookings = await kv.get('bookings') || [];
+    const updated = bookings.filter(b => b.id !== Number(id));
+    await kv.set('bookings', updated);
+    return res.json({ ok: true });
+  }
+
+  res.status(405).end();
+};

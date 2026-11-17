@@ -1,0 +1,12 @@
+{
+  "name": "golf-auto-booking",
+  "version": "1.0.0",
+  "description": "레이크우드CC, 은화삼CC 자동예약 시스템",
+  "engines": { "node": ">=18" },
+  "dependencies": {
+    "@vercel/kv": "^2.0.0",
+    "node-fetch": "^2.7.0",
+    "tough-cookie": "^4.1.4",
+    "fetch-cookie": "^3.0.0"
+  }
+}
