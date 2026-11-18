@@ -24,7 +24,7 @@ module.exports = async function handler(req, res) {
   });
   const getHtml = await getRes.text();
 
-  // POST login
+  // POST login (redirect: manual로 먼저 체크)
   const postRes = await fetchC(`${BASE}/member/login`, {
     method: 'POST',
     headers: {
@@ -34,48 +34,29 @@ module.exports = async function handler(req, res) {
       'Origin': BASE,
     },
     body: new URLSearchParams({
-      returnURL: '/reservation/golf',
+      returnURL: '/',
       usrId: cred.id,
       usrPwd: cred.pw,
       rememberId: '',
       rememberPwd: '',
     }).toString(),
-    redirect: 'follow',
+    redirect: 'manual',
   });
 
-  const postHtml = await postRes.text();
+  const postHtml = await postRes.text().catch(() => '');
 
-  // form 태그 정보 추출
-  const allInputs = [...getHtml.matchAll(/<input[^>]+name=["']([^"']+)["'][^>]*>/gi)].map(m => ({ html: m[0], name: m[1] }));
-  const formTags = [...getHtml.matchAll(/<form[^>]*>/gi)].map(m => m[0]);
-  // 오류 메시지 추출
-  const errorMsg = (postHtml.match(/alert\(['"]([^'"]{5,100})['"]\)/i) || [])[1] || '';
-  const postAlerts = [...postHtml.matchAll(/alert\(['"]([^'"]+)['"]\)/gi)].map(m => m[1]);
-
-  // GET 쿠키 확인
-  const cookies = jar.toJSON().cookies.map(c => `${c.key}=${c.value.substring(0,10)}`);
-
-  // 응답 헤더 확인
-  const postHeaders = {};
+  // 응답 헤더 모두 수집
+  const allPostHeaders = {};
   for (const [k, v] of postRes.headers.entries()) {
-    if (['location', 'set-cookie', 'content-type'].includes(k.toLowerCase())) {
-      postHeaders[k] = v;
-    }
+    allPostHeaders[k] = v.substring(0, 150);
   }
-
-  // POST 응답 길이와 타입
-  const postContentLength = postHtml.length;
-  const hasLoginForm = postHtml.includes('name="mainForm"');
-  const hasErrorText = postHtml.includes('아이디가 올바르지') || postHtml.includes('비밀번호가 올바르지') || postHtml.includes('일치하지 않');
 
   res.json({
     credId: cred.id,
-    cookiesAfterGet: cookies,
     postStatus: postRes.status,
     postUrl: postRes.url,
-    postHeaders,
-    postContentLength,
-    hasLoginForm,
-    hasErrorText,
+    allPostHeaders,
+    postBodyLength: postHtml.length,
+    postBodyFirst300: Buffer.from(postHtml.substring(0, 300)).toString('base64'),
   });
 };
