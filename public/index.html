@@ -34,14 +34,20 @@ body{background:var(--bg);color:var(--fg);font-family:'Noto Sans KR',system-ui,s
 .btn-add{display:flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:10px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;font-family:inherit;}
 .content{padding:24px 28px;display:flex;flex-direction:column;gap:24px;}
 
-/* Stats — 4 columns */
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
-.sc{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:16px 18px;cursor:pointer;transition:border-color .2s,background .2s;user-select:none;}
+/* Sort bar */
+.sort-bar{display:flex;align-items:center;gap:12px;}
+.sort-tabs{display:flex;background:var(--surface2);border-radius:8px;padding:3px;border:1px solid var(--border);}
+.sort-tab{background:none;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;color:var(--fg2);cursor:pointer;font-family:inherit;transition:background .15s,color .15s;}
+.sort-tab.active{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+
+/* Stats — 5 columns */
+.stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
+.sc{background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:14px 16px;cursor:pointer;transition:border-color .2s,background .2s;user-select:none;}
 .sc:hover{border-color:var(--accent);}
 .sc.active{border-color:var(--accent);background:var(--accent-light);}
-.sl{font-size:12px;color:var(--fg2);margin-bottom:6px;font-weight:600;}
+.sl{font-size:11px;color:var(--fg2);margin-bottom:5px;font-weight:600;}
 .sc.active .sl{color:var(--accent);}
-.sv{font-size:28px;font-weight:800;}.sd{font-size:11px;color:var(--fg3);margin-top:4px;}
+.sv{font-size:26px;font-weight:800;}.sd{font-size:10px;color:var(--fg3);margin-top:4px;}
 .sc.active .sd{color:var(--fg2);}
 
 .sh{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
@@ -53,10 +59,11 @@ body{background:var(--bg);color:var(--fg);font-family:'Noto Sans KR',system-ui,s
 .bc:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.07);}
 .bc-row{display:flex;align-items:center;gap:14px;}
 .bd{width:52px;text-align:center;flex-shrink:0;background:var(--accent-light);border-radius:10px;padding:8px 4px;}
-.bd.done{background:var(--surface2);}.bd.fail{background:var(--danger-light);}
+.bd.done{background:var(--surface2);}.bd.fail{background:var(--danger-light);}.bd.cancel{background:var(--surface2);}
 .bdm{font-size:10px;color:var(--accent);font-weight:700;}.bdd{font-size:22px;font-weight:800;color:var(--accent);line-height:1.1;}.bdy{font-size:9px;color:var(--fg3);}
 .bd.done .bdm,.bd.done .bdd{color:var(--fg3);}
 .bd.fail .bdm,.bd.fail .bdd{color:var(--danger);}
+.bd.cancel .bdm,.bd.cancel .bdd{color:var(--fg3);}
 .bi{flex:1;min-width:0;}
 .bclub{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;border-radius:6px;padding:2px 8px;margin-bottom:5px;}
 .bclub.lk{background:var(--accent-light);color:var(--accent);}.bclub.eh{background:var(--blue-light);color:var(--blue);}
@@ -67,6 +74,7 @@ body{background:var(--bg);color:var(--fg);font-family:'Noto Sans KR',system-ui,s
 .chip.done{background:var(--accent-light);color:var(--accent);}
 .chip.soon{background:var(--blue-light);color:var(--blue);}
 .chip.fail{background:var(--danger-light);color:var(--danger);}
+.chip.cancel{background:var(--surface2);color:var(--fg2);border:1px solid var(--border);}
 .bc-arr{font-size:11px;color:var(--fg3);transition:transform .2s;}
 .bc-arr.open{transform:rotate(180deg);}
 
@@ -79,6 +87,8 @@ body{background:var(--bg);color:var(--fg);font-family:'Noto Sans KR',system-ui,s
 .det-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
 .bdel{background:none;border:1px solid var(--border);color:var(--fg2);cursor:pointer;font-size:12px;padding:5px 12px;border-radius:6px;font-family:inherit;}
 .bdel:hover{color:var(--danger);border-color:var(--danger);background:var(--danger-light);}
+.bcancel{background:none;border:1px solid var(--border);color:var(--fg2);cursor:pointer;font-size:12px;padding:5px 12px;border-radius:6px;font-family:inherit;}
+.bcancel:hover{color:var(--warn);border-color:var(--warn);background:var(--warn-light);}
 
 .empty{text-align:center;padding:48px 20px;color:var(--fg3);}
 .ei{font-size:48px;margin-bottom:12px;}.et{font-size:14px;}
@@ -113,13 +123,15 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .toast.show{transform:translateX(-50%) translateY(0);}
 .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
 @keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:1100px){.stats{grid-template-columns:repeat(3,1fr);}}
 @media(max-width:768px){
   .app{flex-direction:column;}.sidebar{width:100%;height:auto;position:static;}.sb-clubs{display:none;}
-  .stats{grid-template-columns:repeat(2,1fr);}
+  .stats{grid-template-columns:repeat(3,1fr);}
   .fg2,.club-cards{grid-template-columns:1fr;}
   .content,.mh{padding:16px;}
   .det-grid{grid-template-columns:1fr;}
 }
+@media(max-width:480px){.stats{grid-template-columns:repeat(2,1fr);}}
 </style>
 </head>
 <body>
@@ -152,6 +164,13 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
     <button class="btn-add" onclick="goPage('add')">＋ 예약 등록</button>
   </div>
   <div class="content">
+    <div class="sort-bar">
+      <span style="font-size:12px;color:var(--fg2);font-weight:600;">정렬</span>
+      <div class="sort-tabs">
+        <button class="sort-tab active" data-sort="created" onclick="setSort('created')">신청일 기준</button>
+        <button class="sort-tab" data-sort="date" onclick="setSort('date')">예약일 기준</button>
+      </div>
+    </div>
     <div class="stats">
       <div class="sc" id="sc-all" onclick="setFilter('all')">
         <div class="sl">예약 접수</div>
@@ -172,6 +191,11 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
         <div class="sl">실패한 예약</div>
         <div class="sv" id="s-fail" style="color:var(--danger)">0</div>
         <div class="sd">오류 확인 필요</div>
+      </div>
+      <div class="sc" id="sc-cancelled" onclick="setFilter('cancelled')">
+        <div class="sl">취소한 예약</div>
+        <div class="sv" id="s-cancelled" style="color:var(--fg2)">0</div>
+        <div class="sd">직접 취소</div>
       </div>
     </div>
     <div>
@@ -254,13 +278,15 @@ const MONTHS = ['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','
 const CLUB = { lk:{name:'레이크우드CC',cls:'lk',e:'🌿'}, eh:{name:'은화삼CC',cls:'eh',e:'🏌️'} };
 
 const FILTER_CFG = {
-  all:     { label:'📋 전체 예약',    empty:'등록된 예약이 없습니다', fn: ()=>true },
-  pending: { label:'⏳ 대기중 예약',  empty:'대기 중인 예약이 없습니다', fn: b=>b.status==='pending' },
-  done:    { label:'✅ 완료된 예약',  empty:'완료된 예약이 없습니다', fn: b=>b.status==='done' },
-  fail:    { label:'❌ 실패한 예약',  empty:'실패한 예약이 없습니다', fn: b=>b.status==='fail' },
+  all:       { label:'📋 전체 예약',    empty:'등록된 예약이 없습니다',   fn: ()=>true },
+  pending:   { label:'⏳ 대기중 예약',  empty:'대기 중인 예약이 없습니다', fn: b=>b.status==='pending' },
+  done:      { label:'✅ 완료된 예약',  empty:'완료된 예약이 없습니다',   fn: b=>b.status==='done' },
+  fail:      { label:'❌ 실패한 예약',  empty:'실패한 예약이 없습니다',   fn: b=>b.status==='fail' },
+  cancelled: { label:'🚫 취소한 예약',  empty:'취소한 예약이 없습니다',   fn: b=>b.status==='cancelled' },
 };
 
 let activeFilter = 'all';
+let sortBy = 'created';
 let allBookings = [];
 
 // ── API ──────────────────────────────────────────────
@@ -308,12 +334,15 @@ function countdown(openDate, openTime='10:00') {
 function bkCard(b, showDel=true) {
   const [y,mo,d] = b.date.split('-');
   const ci = CLUB[b.club] || {name:b.club,cls:'lk',e:'⛳'};
-  const done = b.status==='done', fail = b.status==='fail';
-  const cd = done||fail ? {label: done?'완료':'실패', cls: done?'done':'fail'} : countdown(b.openDate, b.openTime);
-  const sub = done
-    ? `${b.bookedTime||''}${b.bookedCourse?' · '+b.bookedCourse:''} 예약 완료`
-    : fail ? (b.errMsg||'실패')
-    : `오픈일: ${b.openDate} ${b.openTime||'10:00'} 자동 실행`;
+  const done = b.status==='done', fail = b.status==='fail', cancelled = b.status==='cancelled';
+  const cd = done      ? {label:'완료', cls:'done'}
+           : fail      ? {label:'실패', cls:'fail'}
+           : cancelled ? {label:'취소', cls:'cancel'}
+           : countdown(b.openDate, b.openTime);
+  const sub = done      ? `${b.bookedTime||''}${b.bookedCourse?' · '+b.bookedCourse:''} 예약 완료`
+            : fail      ? (b.errMsg||'실패')
+            : cancelled ? `취소됨${b.cancelledAt ? ' · '+b.cancelledAt.slice(0,10) : ''}`
+            : `오픈일: ${b.openDate} ${b.openTime||'10:00'} 자동 실행`;
 
   const rangeText = (b.timeFrom && b.timeTo) ? `${b.timeFrom}~${b.timeTo}` : '';
   const timeLabel = rangeText ? `${b.time} <span style="font-size:11px;color:var(--fg3)">(${rangeText})</span>` : b.time;
@@ -325,8 +354,10 @@ function bkCard(b, showDel=true) {
     ['예약 오픈', `${b.openDate} ${b.openTime||'10:00'}`],
     b.course ? ['희망 코스', b.course] : null,
     ['상태', `<span class="chip ${cd.cls}">${cd.label}</span>`],
-    done ? ['예약 타임', `${b.bookedTime||''} ${b.bookedCourse||''}`] : null,
-    fail ? ['실패 이유', `<span style="color:var(--danger)">${b.errMsg||'알 수 없음'}</span>`] : null,
+    done      ? ['예약 타임', `${b.bookedTime||''} ${b.bookedCourse||''}`] : null,
+    fail      ? ['실패 이유', `<span style="color:var(--danger)">${b.errMsg||'알 수 없음'}</span>`] : null,
+    cancelled ? ['취소 일시', b.cancelledAt ? b.cancelledAt.slice(0,16).replace('T',' ') : '-'] : null,
+    b.createdAt ? ['신청일', b.createdAt.slice(0,10)] : null,
     b.memo ? ['메모', b.memo] : null,
   ].filter(Boolean);
 
@@ -336,7 +367,7 @@ function bkCard(b, showDel=true) {
 
   return `<div class="bc" id="bc-${b.id}" onclick="toggleDetail(${b.id})">
     <div class="bc-row">
-      <div class="bd${done?' done':fail?' fail':''}">
+      <div class="bd${done?' done':fail?' fail':cancelled?' cancel':''}">
         <div class="bdm">${MONTHS[+mo]||mo}</div>
         <div class="bdd">${+d}</div>
         <div class="bdy">${y}</div>
@@ -353,7 +384,10 @@ function bkCard(b, showDel=true) {
     </div>
     <div class="bc-detail" id="det-${b.id}">
       <div class="det-grid">${detHtml}</div>
-      ${showDel ? `<div class="det-actions"><button class="bdel" onclick="event.stopPropagation();delBooking(${b.id})">🗑 예약 삭제</button></div>` : ''}
+      ${showDel ? `<div class="det-actions">
+        ${b.status==='pending' ? `<button class="bcancel" onclick="event.stopPropagation();cancelBooking(${b.id})">🚫 예약 취소</button>` : ''}
+        <button class="bdel" onclick="event.stopPropagation();delBooking(${b.id})">🗑 삭제</button>
+      </div>` : ''}
     </div>
   </div>`;
 }
@@ -367,17 +401,31 @@ function toggleDetail(id) {
   arr.classList.toggle('open', open);
 }
 
-// ── Filter ────────────────────────────────────────────
+// ── Filter & Sort ─────────────────────────────────────
 function setFilter(f) {
   activeFilter = f;
-  ['all','pending','done','fail'].forEach(k =>
+  ['all','pending','done','fail','cancelled'].forEach(k =>
     document.getElementById('sc-'+k).classList.toggle('active', k===f));
+  renderList();
+}
+
+function setSort(s) {
+  sortBy = s;
+  document.querySelectorAll('.sort-tab').forEach(el =>
+    el.classList.toggle('active', el.dataset.sort === s));
   renderList();
 }
 
 function renderList() {
   const cfg = FILTER_CFG[activeFilter];
-  const filtered = [...allBookings].reverse().filter(cfg.fn);
+  let filtered = allBookings.filter(cfg.fn);
+
+  if (sortBy === 'date') {
+    filtered.sort((a, b) => a.date.localeCompare(b.date));
+  } else {
+    filtered.sort((a, b) => (b.createdAt||'').localeCompare(a.createdAt||''));
+  }
+
   document.getElementById('list-title').textContent = cfg.label;
   const lm = document.getElementById('list-main');
   if (filtered.length) {
@@ -396,14 +444,16 @@ async function loadDashboard() {
   const done    = allBookings.filter(b=>b.status==='done');
   const fail    = allBookings.filter(b=>b.status==='fail');
 
-  document.getElementById('s-all').textContent     = allBookings.length;
-  document.getElementById('s-pending').textContent = pending.length;
-  document.getElementById('s-done').textContent    = done.length;
-  document.getElementById('s-fail').textContent    = fail.length;
-  document.getElementById('badge').textContent     = pending.length;
+  const cancelled = allBookings.filter(b=>b.status==='cancelled');
 
-  // keep active filter, re-apply active class
-  ['all','pending','done','fail'].forEach(k =>
+  document.getElementById('s-all').textContent       = allBookings.length;
+  document.getElementById('s-pending').textContent   = pending.length;
+  document.getElementById('s-done').textContent      = done.length;
+  document.getElementById('s-fail').textContent      = fail.length;
+  document.getElementById('s-cancelled').textContent = cancelled.length;
+  document.getElementById('badge').textContent       = pending.length;
+
+  ['all','pending','done','fail','cancelled'].forEach(k =>
     document.getElementById('sc-'+k).classList.toggle('active', k===activeFilter));
 
   renderList();
@@ -450,8 +500,17 @@ async function addBooking() {
   }
 }
 
+async function cancelBooking(id) {
+  if (!confirm('예약을 취소하시겠습니까?\n취소 내역은 목록에 남습니다.')) return;
+  try {
+    await api('/api/bookings', {method:'PATCH', body:{id, status:'cancelled'}});
+    toast('🚫 예약이 취소되었습니다');
+    loadDashboard();
+  } catch(e) { toast('❌ 오류: '+e.message); }
+}
+
 async function delBooking(id) {
-  if (!confirm('예약을 삭제하시겠습니까?')) return;
+  if (!confirm('예약을 삭제하시겠습니까?\n삭제 시 목록에서 완전히 제거됩니다.')) return;
   await api('/api/bookings?id='+id, {method:'DELETE'});
   toast('🗑 삭제되었습니다');
   loadDashboard();
