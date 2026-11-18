@@ -45,18 +45,16 @@ module.exports = async function handler(req, res) {
 
   const postHtml = await postRes.text().catch(() => '');
 
-  // 응답 헤더 모두 수집
-  const allPostHeaders = {};
-  for (const [k, v] of postRes.headers.entries()) {
-    allPostHeaders[k] = v.substring(0, 150);
-  }
+  // GET 페이지에서 form submit 관련 JS 추출
+  const scriptBlocks = [...getHtml.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/gi)].map(m => m[1]);
+  // mainForm 또는 login 관련 스크립트 찾기
+  const loginScripts = scriptBlocks
+    .filter(s => s.includes('mainForm') || s.includes('usrPwd') || s.includes('login') || s.includes('submit'))
+    .map(s => s.substring(0, 1000));
 
   res.json({
     credId: cred.id,
-    postStatus: postRes.status,
-    postUrl: postRes.url,
-    allPostHeaders,
-    postBodyLength: postHtml.length,
-    postBodyFirst300: Buffer.from(postHtml.substring(0, 300)).toString('base64'),
+    loginScriptCount: loginScripts.length,
+    loginScripts,
   });
 };
