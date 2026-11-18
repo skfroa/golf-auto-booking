@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>골프 자동예약</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
 <style>
 :root{--bg:#f4f6f4;--surface:#fff;--surface2:#f0f4f0;--border:#dde5d9;--fg:#1a2b18;--fg2:#546e50;--fg3:#8fa88a;--accent:#2e7d32;--accent-light:#e8f5e3;--warn:#e65100;--warn-light:#fff3e0;--danger:#c62828;--danger-light:#ffebee;--blue:#1565c0;--blue-light:#e3f2fd;color-scheme:light;}
 @media(prefers-color-scheme:dark){:root{--bg:#0d1a0d;--surface:#142014;--surface2:#1a2d1a;--border:#2a3d2a;--fg:#e0ece0;--fg2:#90b890;--fg3:#5a7a5a;--accent:#66bb6a;--accent-light:#1a3a1a;--warn:#ff9800;--warn-light:#2a1a00;--danger:#ef5350;--danger-light:#3a1010;--blue:#64b5f6;--blue-light:#0d2a4a;color-scheme:dark;}}
@@ -35,10 +36,21 @@ body{background:var(--bg);color:var(--fg);font-family:'Noto Sans KR',system-ui,s
 .content{padding:24px 28px;display:flex;flex-direction:column;gap:24px;}
 
 /* Sort bar */
-.sort-bar{display:flex;align-items:center;gap:12px;}
+.sort-bar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:12px 16px;}
+.sort-left{display:flex;align-items:center;gap:10px;flex-shrink:0;}
 .sort-tabs{display:flex;background:var(--surface2);border-radius:8px;padding:3px;border:1px solid var(--border);}
 .sort-tab{background:none;border:none;padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;color:var(--fg2);cursor:pointer;font-family:inherit;transition:background .15s,color .15s;}
 .sort-tab.active{background:var(--surface);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.12);}
+.sort-divider{width:1px;height:28px;background:var(--border);flex-shrink:0;}
+.dr-row{display:flex;align-items:center;gap:8px;flex:1;min-width:0;flex-wrap:wrap;}
+.dr-label{font-size:12px;color:var(--fg2);font-weight:600;white-space:nowrap;flex-shrink:0;}
+.dr-input{width:220px;padding:5px 10px;font-size:12px;cursor:pointer;flex-shrink:0;}
+.dr-reset{background:none;border:1px solid var(--border);border-radius:6px;padding:4px 10px;cursor:pointer;font-size:11px;font-weight:600;color:var(--fg2);font-family:inherit;white-space:nowrap;flex-shrink:0;}
+.dr-reset:hover{color:var(--danger);border-color:var(--danger);background:var(--danger-light);}
+/* Flatpickr theme override */
+.flatpickr-calendar{font-family:'Noto Sans KR',system-ui,sans-serif;border:1px solid var(--border);box-shadow:0 8px 24px rgba(0,0,0,.12);}
+.flatpickr-day.selected,.flatpickr-day.startRange,.flatpickr-day.endRange{background:var(--accent);border-color:var(--accent);}
+.flatpickr-day.inRange{background:var(--accent-light);border-color:var(--accent-light);}
 
 /* Stats — 5 columns */
 .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;}
@@ -165,10 +177,18 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
   </div>
   <div class="content">
     <div class="sort-bar">
-      <span style="font-size:12px;color:var(--fg2);font-weight:600;">정렬</span>
-      <div class="sort-tabs">
-        <button class="sort-tab active" data-sort="created" onclick="setSort('created')">신청일 기준</button>
-        <button class="sort-tab" data-sort="date" onclick="setSort('date')">예약일 기준</button>
+      <div class="sort-left">
+        <span style="font-size:12px;color:var(--fg2);font-weight:600;">정렬</span>
+        <div class="sort-tabs">
+          <button class="sort-tab active" data-sort="created" onclick="setSort('created')">신청일 기준</button>
+          <button class="sort-tab" data-sort="date" onclick="setSort('date')">예약일 기준</button>
+        </div>
+      </div>
+      <div class="sort-divider"></div>
+      <div class="dr-row">
+        <span class="dr-label" id="dr-label">신청일 기간</span>
+        <input type="text" class="fi dr-input" id="dr-range" placeholder="📅 날짜 범위 선택" readonly>
+        <button class="dr-reset" id="dr-reset-btn" onclick="resetDr()" style="display:none">✕ 초기화</button>
       </div>
     </div>
     <div class="stats">
@@ -272,7 +292,7 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 </div><!-- /main -->
 </div><!-- /app -->
 <div class="toast" id="toast"></div>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
 <script>
 const MONTHS = ['','JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
 const CLUB = { lk:{name:'레이크우드CC',cls:'lk',e:'🌿'}, eh:{name:'은화삼CC',cls:'eh',e:'🏌️'} };
@@ -413,12 +433,61 @@ function setSort(s) {
   sortBy = s;
   document.querySelectorAll('.sort-tab').forEach(el =>
     el.classList.toggle('active', el.dataset.sort === s));
+  const lbl = document.getElementById('dr-label');
+  if (lbl) lbl.textContent = s === 'date' ? '예약일 기간' : '신청일 기간';
+  renderList();
+}
+
+let drPicker = null;
+
+function initDatePicker() {
+  drPicker = flatpickr('#dr-range', {
+    mode: 'range',
+    dateFormat: 'Y-m-d',
+    allowInput: false,
+    locale: {
+      firstDayOfWeek: 0,
+      weekdays: {
+        shorthand: ['일','월','화','수','목','금','토'],
+        longhand:  ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'],
+      },
+      months: {
+        shorthand: ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
+        longhand:  ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'],
+      },
+      rangeSeparator: ' ~ ',
+    },
+    onChange: function(dates) {
+      document.getElementById('dr-reset-btn').style.display = dates.length ? '' : 'none';
+      if (dates.length === 0 || dates.length === 2) renderList();
+    },
+    onClose: function(dates) {
+      if (dates.length === 1) renderList();
+    },
+  });
+}
+
+function resetDr() {
+  if (drPicker) drPicker.clear();
+  document.getElementById('dr-reset-btn').style.display = 'none';
   renderList();
 }
 
 function renderList() {
   const cfg = FILTER_CFG[activeFilter];
   let filtered = allBookings.filter(cfg.fn);
+
+  // Date range filter via flatpickr
+  const dates = drPicker ? drPicker.selectedDates : [];
+  if (dates.length >= 1) {
+    const fmt = d => d.toISOString().slice(0, 10);
+    const drFrom = fmt(dates[0]);
+    const drTo   = dates[1] ? fmt(dates[1]) : drFrom;
+    filtered = filtered.filter(b => {
+      const field = sortBy === 'date' ? b.date : (b.createdAt || '').slice(0, 10);
+      return field >= drFrom && field <= drTo;
+    });
+  }
 
   if (sortBy === 'date') {
     filtered.sort((a, b) => a.date.localeCompare(b.date));
@@ -551,6 +620,7 @@ async function saveClub(id) {
   const od = new Date(today); od.setDate(today.getDate()+1);
   document.getElementById('f-date').value = fmt(rd);
   document.getElementById('f-odate').value = fmt(od);
+  initDatePicker();
   setFilter('all');
   loadDashboard();
   setInterval(loadDashboard, 60000);
