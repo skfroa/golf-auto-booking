@@ -52,14 +52,22 @@ module.exports = async function handler(req, res) {
   const errorMsg = (postHtml.match(/alert\(['"]([^'"]{5,100})['"]\)/i) || [])[1] || '';
   const postAlerts = [...postHtml.matchAll(/alert\(['"]([^'"]+)['"]\)/gi)].map(m => m[1]);
 
+  // POST 응답에서 에러 메시지 패턴 찾기
+  const serverError = (postHtml.match(/(?:class="[^"]*(?:error|alert|msg|message|notice)[^"]*")[^>]*>([^<]{5,200})</i) || [])[1] || '';
+  // POST 응답 본문 중간 부분 (로그인 에러 메시지가 있을 위치)
+  const loginFormArea = (() => {
+    const idx = postHtml.indexOf('usrId');
+    return idx > -1 ? postHtml.substring(Math.max(0, idx - 300), idx + 300) : '';
+  })();
+
   res.json({
     getStatus: getRes.status,
     formTags,
-    allInputs,
+    allInputs: allInputs.map(i => i.name),
     postStatus: postRes.status,
     postUrl: postRes.url,
-    errorMsg,
-    postAlerts,
+    serverError,
+    loginFormArea,
     credId: cred.id,
   });
 };
