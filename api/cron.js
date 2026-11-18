@@ -51,8 +51,20 @@ module.exports = async function handler(req, res) {
       console.log(`[Cron] ✅ ${booking.club} ${booking.date} ${result.time} 예약 완료`);
     } catch (err) {
       console.error(`[Cron] ❌ ${booking.club} ${booking.date} 실패:`, err.message);
-      await updateStatus(bookings, booking.id, 'fail', err.message);
-      results.push({ id: booking.id, status: 'fail', reason: err.message });
+      // enableWaitlist=true 이면 실패 대신 대기예약으로 전환
+      if (booking.enableWaitlist) {
+        const idx = bookings.findIndex(b => b.id === booking.id);
+        if (idx !== -1) {
+          bookings[idx].status = 'waitlist';
+          bookings[idx].lastErrMsg = err.message;
+          bookings[idx].waitlistStartedAt = new Date().toISOString();
+        }
+        results.push({ id: booking.id, status: 'waitlist', reason: err.message });
+        console.log(`[Cron] 🔄 ${booking.club} ${booking.date} → 대기예약으로 전환`);
+      } else {
+        await updateStatus(bookings, booking.id, 'fail', err.message);
+        results.push({ id: booking.id, status: 'fail', reason: err.message });
+      }
     }
   }
 

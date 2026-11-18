@@ -17,6 +17,7 @@ module.exports = async function handler(req, res) {
       return res.status(400).json({ error: '필수 항목 누락' });
     }
     const bookings = await kv.get('bookings') || [];
+    const { enableWaitlist, waitlistUntil } = req.body;
     const booking = {
       id: Date.now(),
       club, course, date, time,
@@ -24,6 +25,8 @@ module.exports = async function handler(req, res) {
       timeTo: timeTo || '',
       openDate, openTime: openTime || '10:00',
       memo: memo || '',
+      enableWaitlist: !!enableWaitlist,
+      waitlistUntil: waitlistUntil || '',
       status: 'pending',
       createdAt: new Date().toISOString(),
     };
@@ -33,8 +36,8 @@ module.exports = async function handler(req, res) {
   }
 
   if (req.method === 'PATCH') {
-    const { id, status } = req.body;
-    const allowed = ['pending', 'cancelled'];
+    const { id, status, waitlistUntil } = req.body;
+    const allowed = ['pending', 'cancelled', 'waitlist'];
     if (!id || !allowed.includes(status)) {
       return res.status(400).json({ error: '잘못된 요청' });
     }
@@ -42,7 +45,13 @@ module.exports = async function handler(req, res) {
     const idx = bookings.findIndex(b => b.id === Number(id));
     if (idx === -1) return res.status(404).json({ error: '예약 없음' });
     bookings[idx].status = status;
-    bookings[idx].cancelledAt = status === 'cancelled' ? new Date().toISOString() : undefined;
+    if (status === 'cancelled') bookings[idx].cancelledAt = new Date().toISOString();
+    if (status === 'waitlist') {
+      bookings[idx].waitlistStartedAt = new Date().toISOString();
+      if (waitlistUntil) bookings[idx].waitlistUntil = waitlistUntil;
+      bookings[idx].checkCount = 0;
+      delete bookings[idx].errMsg;
+    }
     await kv.set('bookings', bookings);
     return res.json(bookings[idx]);
   }
