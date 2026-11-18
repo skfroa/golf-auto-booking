@@ -135,6 +135,8 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .time-range .fi{flex:1;}
 .time-sep{color:var(--fg2);font-size:13px;flex-shrink:0;font-weight:600;}
 .time-hint{font-size:11px;color:var(--fg3);margin-top:4px;}
+.time-sel{display:flex;align-items:center;gap:4px;}
+.ts-hm{width:72px;flex-shrink:0;text-align:center;padding:10px 6px;}
 .fa{display:flex;gap:10px;justify-content:flex-end;margin-top:18px;}
 .btn-cancel{padding:10px 18px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--fg2);font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;}
 .btn-save{padding:10px 20px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:13px;font-weight:700;cursor:pointer;font-family:inherit;}
@@ -273,17 +275,18 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
           <select class="fi" id="f-course"><option value="">전체 (아무거나)</option><option value="물길">물길</option><option value="산길">산길</option><option value="꽃길">꽃길</option><option value="숲길">숲길</option></select></div>
         <div class="fg"><label class="fl">라운드 날짜</label><input type="date" class="fi" id="f-date"></div>
         <div class="fg"><label class="fl">희망 시간 <span style="font-weight:400;color:var(--fg3)">(가장 가까운 타임 배정)</span></label>
-          <input type="time" class="fi" id="f-time" value="10:30"></div>
+          <div class="time-sel"><select class="fi ts-hm" id="f-time-h"></select><span class="time-sep">:</span><select class="fi ts-hm" id="f-time-m"></select></div></div>
         <div class="fg full"><label class="fl">희망 시간대 <span style="font-weight:400;color:var(--fg3)">(선택 — 이 범위 내에서만 배정)</span></label>
           <div class="time-range">
-            <input type="time" class="fi" id="f-time-from" placeholder="시작">
+            <div class="time-sel"><select class="fi ts-hm" id="f-time-from-h"></select><span class="time-sep">:</span><select class="fi ts-hm" id="f-time-from-m"></select></div>
             <span class="time-sep">~</span>
-            <input type="time" class="fi" id="f-time-to" placeholder="종료">
+            <div class="time-sel"><select class="fi ts-hm" id="f-time-to-h"></select><span class="time-sep">:</span><select class="fi ts-hm" id="f-time-to-m"></select></div>
           </div>
           <div class="time-hint">예: 10:00 ~ 11:00 으로 설정하면 해당 시간대 내 타임만 예약</div>
         </div>
         <div class="fg"><label class="fl">예약 오픈 날짜</label><input type="date" class="fi" id="f-odate"></div>
-        <div class="fg"><label class="fl">예약 오픈 시간</label><input type="time" class="fi" id="f-otime" value="10:00"></div>
+        <div class="fg"><label class="fl">예약 오픈 시간</label>
+          <div class="time-sel"><select class="fi ts-hm" id="f-otime-h"></select><span class="time-sep">:</span><select class="fi ts-hm" id="f-otime-m"></select></div></div>
         <div class="fg full"><label class="fl">메모 (선택)</label><input type="text" class="fi" id="f-memo" placeholder="예: 친구 모임, 접대 라운드"></div>
         <div class="fg full" style="border-top:1px solid var(--border);padding-top:14px;margin-top:2px;">
           <label class="fl" style="color:var(--purple)">🔄 대기 예약 (취소 타임 자동 감지)</label>
@@ -599,11 +602,13 @@ async function addBooking() {
   const club     = document.getElementById('f-club').value;
   const course   = document.getElementById('f-course').value;
   const date     = document.getElementById('f-date').value;
-  const time     = document.getElementById('f-time').value;
-  const timeFrom = document.getElementById('f-time-from').value;
-  const timeTo   = document.getElementById('f-time-to').value;
+  const time     = document.getElementById('f-time-h').value + ':' + document.getElementById('f-time-m').value;
+  const tfh      = document.getElementById('f-time-from-h').value;
+  const timeFrom = tfh ? tfh + ':' + document.getElementById('f-time-from-m').value : '';
+  const tth      = document.getElementById('f-time-to-h').value;
+  const timeTo   = tth ? tth + ':' + document.getElementById('f-time-to-m').value : '';
   const odate    = document.getElementById('f-odate').value;
-  const otime    = document.getElementById('f-otime').value;
+  const otime    = document.getElementById('f-otime-h').value + ':' + document.getElementById('f-otime-m').value;
   const memo     = document.getElementById('f-memo').value;
 
   if (!date||!time||!odate) { toast('⚠️ 날짜와 시간을 입력해 주세요'); return; }
@@ -644,6 +649,37 @@ async function delBooking(id) {
   await api('/api/bookings?id='+id, {method:'DELETE'});
   toast('🗑 삭제되었습니다');
   loadDashboard();
+}
+
+function buildTimeSels() {
+  function fillH(id, blank, defH) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = blank ? '<option value="">--</option>' : '';
+    for (let h = 0; h <= 23; h++) {
+      const v = String(h).padStart(2,'0');
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if (defH !== undefined && h === defH) o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+  function fillM(id, defM) {
+    const sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = '';
+    for (let m = 0; m < 60; m += 10) {
+      const v = String(m).padStart(2,'0');
+      const o = document.createElement('option');
+      o.value = v; o.textContent = v;
+      if (defM !== undefined && m === defM) o.selected = true;
+      sel.appendChild(o);
+    }
+  }
+  fillH('f-time-h', false, 10);      fillM('f-time-m', 30);
+  fillH('f-time-from-h', true);      fillM('f-time-from-m', 0);
+  fillH('f-time-to-h', true);        fillM('f-time-to-m', 0);
+  fillH('f-otime-h', false, 10);     fillM('f-otime-m', 0);
 }
 
 function toggleWaitlistUntil() {
@@ -710,6 +746,7 @@ async function saveClub(id) {
   const od = new Date(today); od.setDate(today.getDate()+1);
   document.getElementById('f-date').value = fmt(rd);
   document.getElementById('f-odate').value = fmt(od);
+  buildTimeSels();
   initDatePicker();
   setFilter('all');
   loadDashboard();
