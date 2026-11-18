@@ -45,15 +45,24 @@ module.exports = async function handler(req, res) {
 
   const postHtml = await postRes.text();
 
+  // hidden 필드 추출
+  const hiddenFields = [...getHtml.matchAll(/<input[^>]+type=["']hidden["'][^>]*>/gi)].map(m => m[0]);
+  const formAction = (getHtml.match(/<form[^>]+action=["']([^"']+)["']/i) || [])[1];
+  // 오류 메시지 추출
+  const errorMsg = (postHtml.match(/alert\(['"]([^'"]{5,100})['"]\)/i) || [])[1] || '';
+  const alertMsg = (postHtml.match(/(?:경고|오류|error|invalid|fail)[^<]{0,200}/i) || [])[0] || '';
+
   res.json({
     getStatus: getRes.status,
     getUrl: getRes.url,
-    getHasUsrId: getHtml.includes('usrId'),
+    formAction,
+    hiddenFields,
     postStatus: postRes.status,
     postUrl: postRes.url,
     postHasUsrId: postHtml.includes('usrId'),
     postHasUsrPwd: postHtml.includes('usrPwd'),
-    postFirst500: postHtml.substring(0, 500),
+    errorMsg,
+    alertMsg,
     credId: cred.id,
   });
 };
