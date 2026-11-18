@@ -52,22 +52,30 @@ module.exports = async function handler(req, res) {
   const errorMsg = (postHtml.match(/alert\(['"]([^'"]{5,100})['"]\)/i) || [])[1] || '';
   const postAlerts = [...postHtml.matchAll(/alert\(['"]([^'"]+)['"]\)/gi)].map(m => m[1]);
 
-  // POST 응답에서 에러 메시지 패턴 찾기
-  const serverError = (postHtml.match(/(?:class="[^"]*(?:error|alert|msg|message|notice)[^"]*")[^>]*>([^<]{5,200})</i) || [])[1] || '';
-  // POST 응답 본문 중간 부분 (로그인 에러 메시지가 있을 위치)
-  const loginFormArea = (() => {
-    const idx = postHtml.indexOf('usrId');
-    return idx > -1 ? postHtml.substring(Math.max(0, idx - 300), idx + 300) : '';
-  })();
+  // GET 쿠키 확인
+  const cookies = jar.toJSON().cookies.map(c => `${c.key}=${c.value.substring(0,10)}`);
+
+  // 응답 헤더 확인
+  const postHeaders = {};
+  for (const [k, v] of postRes.headers.entries()) {
+    if (['location', 'set-cookie', 'content-type'].includes(k.toLowerCase())) {
+      postHeaders[k] = v;
+    }
+  }
+
+  // POST 응답 길이와 타입
+  const postContentLength = postHtml.length;
+  const hasLoginForm = postHtml.includes('name="mainForm"');
+  const hasErrorText = postHtml.includes('아이디가 올바르지') || postHtml.includes('비밀번호가 올바르지') || postHtml.includes('일치하지 않');
 
   res.json({
-    getStatus: getRes.status,
-    formTags,
-    allInputs: allInputs.map(i => i.name),
+    credId: cred.id,
+    cookiesAfterGet: cookies,
     postStatus: postRes.status,
     postUrl: postRes.url,
-    serverError,
-    loginFormArea,
-    credId: cred.id,
+    postHeaders,
+    postContentLength,
+    hasLoginForm,
+    hasErrorText,
   });
 };
