@@ -5,7 +5,10 @@ const { bookEunhwasam } = require('../lib/eunhwasam');
 // Called by Upstash QStash every 10 minutes
 // URL: /api/waitlist?secret=<CRON_SECRET>
 module.exports = async function handler(req, res) {
-  if (req.query.secret !== process.env.CRON_SECRET) {
+  const authorized =
+    req.headers.authorization === `Bearer ${process.env.CRON_SECRET}` ||
+    req.query.secret === process.env.CRON_SECRET;
+  if (!authorized) {
     return res.status(401).json({ error: 'Unauthorized' });
   }
 

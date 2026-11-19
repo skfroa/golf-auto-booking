@@ -50,7 +50,6 @@ module.exports = async function handler(req, res) {
           const stored = await kv.get('warmup:lk');
           if (stored) {
             warmSession = JSON.parse(stored);
-            await kv.del('warmup:lk');
             console.log(`[Cron] 레이크우드 웜업 세션 적용 (쿠키 ${warmSession.length}개)`);
           }
         } catch (e) {
@@ -63,7 +62,6 @@ module.exports = async function handler(req, res) {
           const stored = await kv.get('warmup:eh');
           if (stored) {
             warmSessionEh = JSON.parse(stored);
-            await kv.del('warmup:eh');
             console.log(`[Cron] 은화삼 웜업 세션 적용 (쿠키 ${warmSessionEh.length}개)`);
           }
         } catch (e) {
