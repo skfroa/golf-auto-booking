@@ -1,5 +1,6 @@
 const { kv } = require('@vercel/kv');
 const { bookLakewood } = require('../lib/lakewood');
+const { bookEunhwasam } = require('../lib/eunhwasam');
 
 // Called by Upstash QStash every 10 minutes
 // URL: /api/waitlist?secret=<CRON_SECRET>
@@ -55,8 +56,10 @@ module.exports = async function handler(req, res) {
       let result;
       if (booking.club === 'lk') {
         result = await bookLakewood(cred, booking);
+      } else if (booking.club === 'eh') {
+        result = await bookEunhwasam(cred, booking);
       } else {
-        throw new Error('은화삼CC 대기 예약 미구현');
+        throw new Error('알 수 없는 골프장');
       }
 
       bookings[idx].status = 'done';

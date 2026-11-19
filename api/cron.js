@@ -1,5 +1,6 @@
 const { kv } = require('@vercel/kv');
 const { bookLakewood } = require('../lib/lakewood');
+const { bookEunhwasam } = require('../lib/eunhwasam');
 
 // Runs every day at 10:00 AM KST (01:00 UTC)
 // vercel.json: "schedule": "0 1 * * *"
@@ -40,8 +41,7 @@ module.exports = async function handler(req, res) {
       if (booking.club === 'lk') {
         result = await bookLakewood(cred, booking);
       } else if (booking.club === 'eh') {
-        // 은화삼 추가 예정
-        throw new Error('은화삼CC 미구현');
+        result = await bookEunhwasam(cred, booking);
       } else {
         throw new Error('알 수 없는 골프장');
       }
