@@ -45,9 +45,31 @@ module.exports = async function handler(req, res) {
     try {
       let result;
       if (booking.club === 'lk') {
-        result = await bookLakewood(cred, booking);
+        let warmSession = null;
+        try {
+          const stored = await kv.get('warmup:lk');
+          if (stored) {
+            warmSession = JSON.parse(stored);
+            await kv.del('warmup:lk');
+            console.log(`[Cron] 레이크우드 웜업 세션 적용 (쿠키 ${warmSession.length}개)`);
+          }
+        } catch (e) {
+          console.warn('[Cron] 웜업 세션 로드 실패, 일반 플로우로 진행:', e.message);
+        }
+        result = await bookLakewood(cred, booking, warmSession);
       } else if (booking.club === 'eh') {
-        result = await bookEunhwasam(cred, booking);
+        let warmSessionEh = null;
+        try {
+          const stored = await kv.get('warmup:eh');
+          if (stored) {
+            warmSessionEh = JSON.parse(stored);
+            await kv.del('warmup:eh');
+            console.log(`[Cron] 은화삼 웜업 세션 적용 (쿠키 ${warmSessionEh.length}개)`);
+          }
+        } catch (e) {
+          console.warn('[Cron] 은화삼 웜업 세션 로드 실패, 일반 플로우로 진행:', e.message);
+        }
+        result = await bookEunhwasam(cred, booking, warmSessionEh);
       } else {
         throw new Error('알 수 없는 골프장');
       }
