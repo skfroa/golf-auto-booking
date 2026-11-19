@@ -7,6 +7,7 @@ const makeFetchCookie = typeof _fc === 'function' ? _fc : _fc.default;
 const LK_BASE = 'https://lakewood.co.kr';
 const EH_BASE = 'https://www.ehscc.co.kr';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+const CH_UA = '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"';
 
 // Called by QStash:
 //   lk: "59 0 * * *"  → 09:59 KST (00:59 UTC) — Lakewood opens 10:00 KST
@@ -56,7 +57,19 @@ async function warmupLakewood(res, cred, count, todayStr) {
   const fetchC = makeFetchCookie(fetch, jar);
 
   await fetchC(`${LK_BASE}/member/login`, {
-    headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8', 'Accept-Language': 'ko-KR,ko;q=0.9' },
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'sec-ch-ua': CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Cache-Control': 'max-age=0',
+    },
   });
 
   const loginRes = await fetchC(`${LK_BASE}/member/loginChk`, {
@@ -65,6 +78,15 @@ async function warmupLakewood(res, cred, count, todayStr) {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       'X-Requested-With': 'XMLHttpRequest',
       'User-Agent': UA,
+      'Accept': '*/*',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'sec-ch-ua': CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin',
       'Referer': `${LK_BASE}/member/login`,
       'Origin': LK_BASE,
     },
@@ -78,7 +100,21 @@ async function warmupLakewood(res, cred, count, todayStr) {
     return res.json({ warmed: 0, error: msg });
   }
 
-  await fetchC(`${LK_BASE}/reservation/golf`, { headers: { 'User-Agent': UA, 'Referer': `${LK_BASE}/` } });
+  await fetchC(`${LK_BASE}/reservation/golf`, {
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'sec-ch-ua': CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Referer': `${LK_BASE}/`,
+    },
+  });
 
   const cookies = await jar.getCookies(LK_BASE);
   const cookieData = cookies.map(c => ({ key: c.key, value: c.value }));
@@ -94,7 +130,19 @@ async function warmupEunhwasam(res, cred, count, todayStr) {
 
   // 1. GET login page
   await fetchC(`${EH_BASE}/Member/Login`, {
-    headers: { 'User-Agent': UA, 'Accept': 'text/html,application/xhtml+xml' },
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'sec-ch-ua': CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Cache-Control': 'max-age=0',
+    },
   });
 
   // 2. POST login
@@ -104,6 +152,15 @@ async function warmupEunhwasam(res, cred, count, todayStr) {
       'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
       'X-Requested-With': 'XMLHttpRequest',
       'User-Agent': UA,
+      'Accept': '*/*',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'sec-ch-ua': CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'empty',
+      'Sec-Fetch-Mode': 'cors',
+      'Sec-Fetch-Site': 'same-origin',
       'Referer': `${EH_BASE}/Member/Login`,
       'Origin': EH_BASE,
     },
@@ -119,7 +176,19 @@ async function warmupEunhwasam(res, cred, count, todayStr) {
 
   // 3. GET GolfCalendar (session init + cookie prime)
   await fetchC(`${EH_BASE}/Booking/GolfCalendar`, {
-    headers: { 'User-Agent': UA, 'Referer': EH_BASE },
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'sec-ch-ua': CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Referer': EH_BASE,
+    },
   });
 
   const cookies = await jar.getCookies(EH_BASE);
