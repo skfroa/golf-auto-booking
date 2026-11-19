@@ -15,15 +15,21 @@ module.exports = async function handler(req, res) {
   const kstOffset = 9 * 60;
   const kstNow = new Date(today.getTime() + kstOffset * 60000);
   const todayStr = kstNow.toISOString().slice(0, 10); // YYYY-MM-DD
+  const currentKSTMins = kstNow.getUTCHours() * 60 + kstNow.getUTCMinutes();
+  const toMins = t => t ? parseInt(t.slice(0, 2)) * 60 + parseInt(t.slice(3, 5)) : 600;
 
-  console.log(`[Cron] Running for date: ${todayStr}`);
+  console.log(`[Cron] Running for date: ${todayStr}, KST time: ${String(kstNow.getUTCHours()).padStart(2,'0')}:${String(kstNow.getUTCMinutes()).padStart(2,'0')}`);
 
   const [bookings, clubs] = await Promise.all([
     kv.get('bookings').then(v => v || []),
     kv.get('clubs').then(v => v || {}),
   ]);
 
-  const toRun = bookings.filter(b => b.status === 'pending' && b.openDate === todayStr);
+  const toRun = bookings.filter(b =>
+    b.status === 'pending' &&
+    b.openDate === todayStr &&
+    toMins(b.openTime) <= currentKSTMins
+  );
   console.log(`[Cron] Found ${toRun.length} booking(s) to execute`);
 
   const results = [];
