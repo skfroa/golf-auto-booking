@@ -2,8 +2,8 @@ const { kv } = require('@vercel/kv');
 const { bookLakewood } = require('../lib/lakewood');
 const { bookEunhwasam } = require('../lib/eunhwasam');
 
-// Runs every day at 10:00 AM KST (01:00 UTC)
-// vercel.json: "schedule": "0 1 * * *"
+// Runs at 08:59 KST (23:59 UTC) and 09:59 KST (00:59 UTC) — 1 min before opening
+// Waits until exact openTime then books immediately (zero-delay precision)
 module.exports = async function handler(req, res) {
   // Vercel Cron auth
   if (req.headers.authorization !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -11,10 +11,9 @@ module.exports = async function handler(req, res) {
   }
 
   const today = new Date();
-  // KST = UTC+9: check today's date in KST
   const kstOffset = 9 * 60;
   const kstNow = new Date(today.getTime() + kstOffset * 60000);
-  const todayStr = kstNow.toISOString().slice(0, 10); // YYYY-MM-DD
+  const todayStr = kstNow.toISOString().slice(0, 10);
   const currentKSTMins = kstNow.getUTCHours() * 60 + kstNow.getUTCMinutes();
   const toMins = t => t ? parseInt(t.slice(0, 2)) * 60 + parseInt(t.slice(3, 5)) : 600;
 
@@ -25,10 +24,11 @@ module.exports = async function handler(req, res) {
     kv.get('clubs').then(v => v || {}),
   ]);
 
+  // 1분 이내 오픈 예약도 포함 (사전 기동 대응)
   const toRun = bookings.filter(b =>
     b.status === 'pending' &&
     b.openDate === todayStr &&
-    toMins(b.openTime) <= currentKSTMins
+    toMins(b.openTime) <= currentKSTMins + 2
   );
   console.log(`[Cron] Found ${toRun.length} booking(s) to execute`);
 
@@ -43,6 +43,17 @@ module.exports = async function handler(req, res) {
     }
 
     try {
+      // 오픈 시각까지 정밀 대기 (최대 65초)
+      const nowForWait = new Date();
+      const kstForWait = new Date(nowForWait.getTime() + 9 * 3600000);
+      const kstTotalSec = kstForWait.getUTCHours() * 3600 + kstForWait.getUTCMinutes() * 60 + kstForWait.getUTCSeconds();
+      const openTotalSec = toMins(booking.openTime) * 60;
+      const msUntilOpen = (openTotalSec - kstTotalSec) * 1000;
+      if (msUntilOpen > 0 && msUntilOpen < 65000) {
+        console.log(`[Cron] ⏱ ${booking.openTime} 오픈까지 ${msUntilOpen}ms 대기`);
+        await new Promise(r => setTimeout(r, msUntilOpen));
+      }
+
       let result;
       if (booking.club === 'lk') {
         let warmSession = null;
