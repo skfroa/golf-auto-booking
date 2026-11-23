@@ -168,7 +168,8 @@ async function warmupEunhwasam(res, cred, count, todayStr) {
   });
 
   const loginData = await loginRes.json().catch(() => null);
-  if (!loginData || loginData.code !== '0') {
+  // EH 서버는 code를 숫자 0 또는 문자열 '0'으로 반환하므로 느슨한 비교 사용
+  if (!loginData || loginData.code != 0) {
     const msg = loginData?.msg || '로그인 실패';
     console.error(`[Warmup:eh] 로그인 실패: ${msg}`);
     return res.json({ warmed: 0, error: msg });
