@@ -142,7 +142,7 @@ module.exports = async function handler(req, res) {
 
   await kv.set('bookings', bookings);
   return res.json({
-    checked: waitlisted.length,
+    checked: toProcess.length,
     results,
     timestamp: now.toISOString(),
   });
