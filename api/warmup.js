@@ -175,6 +175,23 @@ async function warmupEunhwasam(res, cred, count, todayStr) {
     return res.json({ warmed: 0, error: msg });
   }
 
+  // 2-5. GET 메인 페이지 (로그인 후 세션 갱신)
+  await fetchC(`${EH_BASE}/`, {
+    headers: {
+      'User-Agent': UA,
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+      'Accept-Language': 'ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'sec-ch-ua': CH_UA,
+      'sec-ch-ua-mobile': '?0',
+      'sec-ch-ua-platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'same-origin',
+      'Referer': `${EH_BASE}/Member/Login`,
+    },
+  });
+
   // 3. GET GolfCalendar (session init + cookie prime)
   await fetchC(`${EH_BASE}/Booking/GolfCalendar`, {
     headers: {
