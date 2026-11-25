@@ -48,7 +48,12 @@ module.exports = async function handler(req, res) {
       const pageRes = await fetchC(BASE, { headers: hdrs({ Accept: 'text/html,*/*' }) });
       const pageHtml = await pageRes.text();
       const csrf = extractCsrf(pageHtml);
-      if (!csrf) return res.status(500).json({ error: 'CSRF 토큰을 찾을 수 없습니다' });
+      if (!csrf) return res.status(500).json({
+        error: 'CSRF 토큰을 찾을 수 없습니다',
+        status: pageRes.status,
+        url: pageRes.url,
+        htmlPreview: pageHtml.substring(0, 400)
+      });
 
       const smsBody = new URLSearchParams({ msPhone: PHONE, csrf_token: csrf });
       const smsRes = await fetchC(`${BASE}smsCheck`, {
