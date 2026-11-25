@@ -1092,7 +1092,12 @@ function bjRenderRightPanel() {
   html += '</div></div>';
 
   // 등록 버튼
-  html += '<button class="bj-submit"'+(qKeys.length===0?' disabled':'')+' onclick="bjSubmitAll()">📤 '+qKeys.length+'건 접수 대기 등록</button>';
+  var pendingCount = qKeys.filter(function(k){return !BJ.queued[k].submitted;}).length;
+  var doneCount = qKeys.filter(function(k){return !!BJ.queued[k].submitted;}).length;
+  html += '<button class="bj-submit"'+(pendingCount===0?' disabled':'')+' onclick="bjSubmitAll()">📤 '+pendingCount+'건 접수 등록</button>';
+  if (doneCount > 0) {
+    html += '<button onclick="bjResetSubmitted()" style="width:100%;margin-top:6px;padding:9px;border:1px solid var(--warn);border-radius:8px;background:transparent;color:var(--warn);font-size:12px;font-weight:600;cursor:pointer;">🔄 접수 완료 '+doneCount+'건 초기화 (재접수용)</button>';
+  }
 
   el.innerHTML = html;
 }
@@ -1217,6 +1222,13 @@ async function bjOtpConfirm() {
   }
   if (_bjOtpBtn) { _bjOtpBtn.disabled=false; bjRenderRightPanel(); }
   if (btn) { btn.disabled=false; btn.textContent='확인'; }
+}
+
+function bjResetSubmitted() {
+  if (!confirm('접수 완료 표시를 모두 초기화하고 재접수 대기 상태로 변경하시겠습니까?')) return;
+  Object.keys(BJ.queued).forEach(function(k){ delete BJ.queued[k].submitted; });
+  bjSave(); bjRenderCal(); bjRenderRightPanel(); updateBjBadge();
+  toast('🔄 초기화 완료 — 다시 접수 등록 버튼을 눌러주세요');
 }
 
 function pad2(n) { return n < 10 ? '0'+n : ''+n; }
