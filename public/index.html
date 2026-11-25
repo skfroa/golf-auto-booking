@@ -184,6 +184,7 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .bj-btn.q{background:var(--warn);}
 .bj-cell-btns{display:flex;gap:2px;width:100%;}
 .bj-cell-btns .bj-btn{flex:1;font-size:9px;padding:3px 1px;}
+.bj-btn.done{background:#16a34a;}
 .bj-cell.empty,.bj-cell.na{background:var(--surface2);}
 .bj-cell.na .bj-na{font-size:10px;color:var(--fg3);}
 
@@ -682,7 +683,7 @@ function renderList() {
 
 // ── Dashboard ─────────────────────────────────────────
 async function loadDashboard() {
-  allBookings = await api('/api/bookings').catch(()=>[]);
+  allBookings = (await api('/api/bookings').catch(()=>[])).filter(b => !(b.memo||'').startsWith('[배정예약]'));
   const pending = allBookings.filter(b=>b.status==='pending');
   const done    = allBookings.filter(b=>b.status==='done');
   const fail    = allBookings.filter(b=>b.status==='fail');
@@ -702,7 +703,7 @@ async function loadDashboard() {
 }
 
 async function loadHistory() {
-  const bookings = await api('/api/bookings').catch(()=>[]);
+  const bookings = (await api('/api/bookings').catch(()=>[])).filter(b => !(b.memo||'').startsWith('[배정예약]'));
   const lh = document.getElementById('list-history');
   lh.innerHTML = [...bookings].reverse().map(b=>bkCard(b)).join('') ||
     `<div class="empty"><div class="ei">📋</div><div class="et">예약 내역이 없습니다</div></div>`;
@@ -924,10 +925,12 @@ function bjRenderCal() {
     btnsDiv.className = 'bj-cell-btns';
     SN_MEMBERS.forEach(function(mem, idx) {
       var fullKey = dk + '-' + mem.id;
-      var isActive = !!BJ.queued[fullKey];
+      var entry = BJ.queued[fullKey];
+      var isSubmitted = entry && entry.submitted;
+      var isActive = !!entry;
       var btn = document.createElement('button');
-      btn.className = 'bj-btn' + (isActive ? ' q' : '');
-      btn.textContent = (idx+1) + '번';
+      btn.className = 'bj-btn' + (isSubmitted ? ' done' : isActive ? ' q' : '');
+      btn.textContent = isSubmitted ? '✓' : (idx+1) + '번';
       btn.title = mem.name;
       btn.onclick = (function(fk, mid){ return function(){ bjToggle(fk, mid); }; })(fullKey, mem.id);
       btnsDiv.appendChild(btn);
@@ -1023,28 +1026,45 @@ function bjRenderRightPanel() {
         return '<option value="'+t+'"'+(t===item.timeE?' selected':'')+'>'+t+'시</option>';
       }).join('');
 
-      html += '<div class="bj-q-item">'
+      var isSubmitted = !!item.submitted;
+      var submittedBadge = isSubmitted ? '<span style="font-size:10px;font-weight:700;color:#fff;background:#16a34a;padding:2px 7px;border-radius:4px;margin-left:6px;">✓ 접수 완료</span>' : '';
+      var itemStyle = isSubmitted ? ' style="opacity:.75;border-color:#16a34a;"' : '';
+
+      html += '<div class="bj-q-item"'+itemStyle+'>'
         + '<div class="bj-q-top">'
         + '<span class="bj-q-date">'+dl+'</span>'
         + '<span style="font-size:11px;font-weight:700;color:var(--indigo);margin-left:6px;">'+memObj.name+'</span>'
-        + '<button class="bj-q-rm" onclick="bjRmQ(\''+dk+'\')">×</button></div>'
-        + '<div class="bj-q-fields">'
-        + '<div class="bj-q-fl"><label>1순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c1\',this.value)">'+c1Opts+'</select></div>'
-        + '<div class="bj-q-fl"><label>2순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c2\',this.value)">'+c2Opts+'</select></div>'
-        + '</div>'
-        + '<div class="bj-q-fields">'
-        + '<div class="bj-q-fl"><label>3순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c3\',this.value)">'+c3Opts+'</select></div>'
-        + '<div class="bj-q-fl"><label>시작~종료</label>'
-        + '<div style="display:flex;gap:3px;">'
-        + '<select style="flex:1;" onchange="bjUpdQ(\''+dk+'\',\'timeS\',this.value)">'+tsOpts+'</select>'
-        + '<select style="flex:1;" onchange="bjUpdQ(\''+dk+'\',\'timeE\',this.value)">'+teOpts+'</select>'
-        + '</div></div>'
-        + '</div>'
-        + '<div class="bj-q-fields" style="grid-template-columns:1fr">'
-        + '<div class="bj-q-fl"><label>비고</label>'
-        + '<input type="text" value="'+item.remark+'" placeholder="메모..." maxlength="30" onchange="bjUpdQ(\''+dk+'\',\'remark\',this.value)"></div>'
-        + '</div>'
-        + '</div>';
+        + submittedBadge
+        + '<button class="bj-q-rm" onclick="bjRmQ(\''+dk+'\')">×</button></div>';
+
+      if (!isSubmitted) {
+        html += '<div class="bj-q-fields">'
+          + '<div class="bj-q-fl"><label>1순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c1\',this.value)">'+c1Opts+'</select></div>'
+          + '<div class="bj-q-fl"><label>2순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c2\',this.value)">'+c2Opts+'</select></div>'
+          + '</div>'
+          + '<div class="bj-q-fields">'
+          + '<div class="bj-q-fl"><label>3순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c3\',this.value)">'+c3Opts+'</select></div>'
+          + '<div class="bj-q-fl"><label>시작~종료</label>'
+          + '<div style="display:flex;gap:3px;">'
+          + '<select style="flex:1;" onchange="bjUpdQ(\''+dk+'\',\'timeS\',this.value)">'+tsOpts+'</select>'
+          + '<select style="flex:1;" onchange="bjUpdQ(\''+dk+'\',\'timeE\',this.value)">'+teOpts+'</select>'
+          + '</div></div>'
+          + '</div>'
+          + '<div class="bj-q-fields" style="grid-template-columns:1fr">'
+          + '<div class="bj-q-fl"><label>비고</label>'
+          + '<input type="text" value="'+item.remark+'" placeholder="메모..." maxlength="30" onchange="bjUpdQ(\''+dk+'\',\'remark\',this.value)"></div>'
+          + '</div>';
+      } else {
+        // 완료 항목: 읽기 전용 요약
+        var cLabel = (CLUB[item.c1]?CLUB[item.c1].name:item.c1)
+          +(item.c2&&CLUB[item.c2]?' > '+CLUB[item.c2].name:'')
+          +(item.c3&&CLUB[item.c3]?' > '+CLUB[item.c3].name:'');
+        html += '<div style="font-size:11px;color:var(--fg2);padding:4px 0 2px;">'
+          + cLabel + ' · ' + item.timeS+'~'+item.timeE+'시'
+          + (item.remark ? ' · '+item.remark : '')
+          + '</div>';
+      }
+      html += '</div>';
     });
   }
   html += '</div></div>';
@@ -1070,7 +1090,7 @@ function bjOnOpenDate(val) {
 }
 
 function updateBjBadge() {
-  var cnt = Object.keys(BJ.queued).length;
+  var cnt = Object.keys(BJ.queued).filter(function(dk){ return !BJ.queued[dk].submitted; }).length;
   var el = document.getElementById('bj-badge');
   if (el) el.textContent = cnt;
 }
@@ -1101,6 +1121,9 @@ async function bjSubmitAll() {
   if (btn) { btn.disabled=true; btn.textContent='등록 중...'; }
 
   var failed = 0;
+  var successKeys = [];
+  // submitted 항목 제외하고 pending만 접수
+  qKeys = qKeys.filter(function(dk){ return !BJ.queued[dk].submitted; });
   for (var i = 0; i < qKeys.length; i++) {
     var dk = qKeys[i];
     var it = BJ.queued[dk];
@@ -1124,18 +1147,23 @@ async function bjSubmitAll() {
         enableWaitlist: false,
         waitlistUntil: '',
       }});
+      successKeys.push(dk);
     } catch(e) { failed++; }
   }
 
-  if (failed === 0) {
-    toast('✅ '+qKeys.length+'건 접수 대기 등록 완료!');
-    BJ.queued = {};
+  if (successKeys.length > 0) {
+    successKeys.forEach(function(dk) {
+      if (BJ.queued[dk]) BJ.queued[dk].submitted = true;
+    });
     bjSave();
     bjRenderCal();
     bjRenderRightPanel();
     updateBjBadge();
+  }
+  if (failed === 0) {
+    toast('✅ '+successKeys.length+'건 접수 대기 등록 완료!');
   } else {
-    toast('⚠️ '+failed+'건 등록 실패 - 다시 시도해 주세요');
+    toast('⚠️ '+failed+'건 등록 실패 ('+successKeys.length+'건 성공)');
   }
   if (btn) { btn.disabled=false; btn.textContent='📤 접수 대기 등록'; }
 }
