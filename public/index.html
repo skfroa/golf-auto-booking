@@ -928,9 +928,11 @@ function bjRenderCal() {
       var entry = BJ.queued[fullKey];
       var isSubmitted = entry && entry.submitted;
       var isActive = !!entry;
+      var clubShort = (isActive && entry.c1 && CLUB[entry.c1])
+        ? CLUB[entry.c1].name.replace(/CC$|GR$/, '').trim() : '';
       var btn = document.createElement('button');
       btn.className = 'bj-btn' + (isSubmitted ? ' done' : isActive ? ' q' : '');
-      btn.textContent = isSubmitted ? '✓' : (idx+1) + '번';
+      btn.textContent = isSubmitted ? '✓' : (isActive ? clubShort : (idx+1)+'번');
       btn.title = mem.name;
       btn.onclick = (function(fk, mid){ return function(){ bjToggle(fk, mid); }; })(fullKey, mem.id);
       btnsDiv.appendChild(btn);
