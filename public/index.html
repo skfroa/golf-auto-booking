@@ -175,10 +175,11 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .bj-cal{display:grid;grid-template-columns:repeat(7,1fr);}
 .bj-dow{padding:7px 0;text-align:center;font-size:11px;color:var(--fg3);font-weight:600;border-bottom:1px solid var(--border);}
 .bj-dow.s{color:#ef4444;}
-.bj-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:5px 4px;min-height:60px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.bj-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 4px;min-height:90px;display:flex;flex-direction:column;align-items:center;gap:3px;}
 .bj-cell:nth-child(7n){border-right:none;}
-.bj-dn{font-size:12px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
+.bj-dn{font-size:13px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
 .bj-dn.s{color:#ef4444;}.bj-dn.b{color:var(--blue);}
+.bj-club-lbl{font-size:9px;font-weight:700;line-height:1.2;text-align:center;min-height:11px;}
 .bj-btn{width:100%;padding:4px 0;border:none;border-radius:3px;background:var(--indigo);color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;}
 .bj-btn:hover{opacity:.85;}
 .bj-btn.q{background:var(--warn);}
@@ -921,6 +922,21 @@ function bjRenderCal() {
     dnEl.textContent = d;
     cell.appendChild(dnEl);
 
+    // 날짜 아래 1순위 골프장명 라벨 (첫 번째 접수 항목 기준)
+    var clubLblEl = document.createElement('div');
+    clubLblEl.className = 'bj-club-lbl';
+    var firstEntry = null;
+    for (var mi = 0; mi < SN_MEMBERS.length; mi++) {
+      var e = BJ.queued[dk + '-' + SN_MEMBERS[mi].id];
+      if (e) { firstEntry = e; break; }
+    }
+    if (firstEntry && firstEntry.c1 && CLUB[firstEntry.c1]) {
+      var clubShortLbl = CLUB[firstEntry.c1].name.replace(/CC$|GR$/, '').trim();
+      clubLblEl.textContent = clubShortLbl;
+      clubLblEl.style.color = firstEntry.submitted ? '#16a34a' : 'var(--warn)';
+    }
+    cell.appendChild(clubLblEl);
+
     var btnsDiv = document.createElement('div');
     btnsDiv.className = 'bj-cell-btns';
     SN_MEMBERS.forEach(function(mem, idx) {
@@ -936,23 +952,6 @@ function bjRenderCal() {
       btnsDiv.appendChild(btn);
     });
     cell.appendChild(btnsDiv);
-
-    // 각 회원의 1순위 골프장명 라벨 (접수대기/완료 시 표시)
-    var labelsDiv = document.createElement('div');
-    labelsDiv.style.cssText = 'display:flex;gap:2px;width:100%;';
-    SN_MEMBERS.forEach(function(mem) {
-      var fullKey = dk + '-' + mem.id;
-      var entry = BJ.queued[fullKey];
-      var lbl = document.createElement('div');
-      lbl.style.cssText = 'flex:1;font-size:8px;text-align:center;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;font-weight:700;line-height:1.3;';
-      if (entry && entry.c1 && CLUB[entry.c1]) {
-        var clubShort = CLUB[entry.c1].name.replace(/CC$|GR$/, '').trim();
-        lbl.textContent = clubShort;
-        lbl.style.color = entry.submitted ? '#16a34a' : 'var(--warn)';
-      }
-      labelsDiv.appendChild(lbl);
-    });
-    cell.appendChild(labelsDiv);
 
     grid.appendChild(cell);
   }
