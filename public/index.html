@@ -175,17 +175,18 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .bj-cal{display:grid;grid-template-columns:repeat(7,1fr);}
 .bj-dow{padding:7px 0;text-align:center;font-size:11px;color:var(--fg3);font-weight:600;border-bottom:1px solid var(--border);}
 .bj-dow.s{color:#ef4444;}
-.bj-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 4px;min-height:90px;display:flex;flex-direction:column;align-items:center;gap:3px;}
+.bj-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 4px;min-height:100px;display:flex;flex-direction:column;align-items:center;gap:3px;}
 .bj-cell:nth-child(7n){border-right:none;}
 .bj-dn{font-size:13px;width:26px;height:26px;display:flex;align-items:center;justify-content:center;border-radius:50%;}
 .bj-dn.s{color:#ef4444;}.bj-dn.b{color:var(--blue);}
-.bj-club-lbl{font-size:9px;font-weight:700;line-height:1.2;text-align:center;min-height:11px;}
 .bj-btn{width:100%;padding:4px 0;border:none;border-radius:3px;background:var(--indigo);color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;}
 .bj-btn:hover{opacity:.85;}
 .bj-btn.q{background:var(--warn);}
-.bj-cell-btns{display:flex;gap:2px;width:100%;}
-.bj-cell-btns .bj-btn{flex:1;font-size:9px;padding:3px 1px;}
 .bj-btn.done{background:#16a34a;}
+.bj-cell-btns{display:flex;flex-direction:column;gap:2px;width:100%;}
+.bj-mem-row{display:flex;align-items:center;gap:3px;width:100%;}
+.bj-mem-row .bj-btn{width:30px;flex-shrink:0;font-size:9px;padding:2px 0;}
+.bj-mem-club{font-size:9px;font-weight:700;flex:1;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
 .bj-cell.empty,.bj-cell.na{background:var(--surface2);}
 .bj-cell.na .bj-na{font-size:10px;color:var(--fg3);}
 
@@ -922,21 +923,6 @@ function bjRenderCal() {
     dnEl.textContent = d;
     cell.appendChild(dnEl);
 
-    // 날짜 아래 1순위 골프장명 라벨 (첫 번째 접수 항목 기준)
-    var clubLblEl = document.createElement('div');
-    clubLblEl.className = 'bj-club-lbl';
-    var firstEntry = null;
-    for (var mi = 0; mi < SN_MEMBERS.length; mi++) {
-      var e = BJ.queued[dk + '-' + SN_MEMBERS[mi].id];
-      if (e) { firstEntry = e; break; }
-    }
-    if (firstEntry && firstEntry.c1 && CLUB[firstEntry.c1]) {
-      var clubShortLbl = CLUB[firstEntry.c1].name.replace(/CC$|GR$/, '').trim();
-      clubLblEl.textContent = clubShortLbl;
-      clubLblEl.style.color = firstEntry.submitted ? '#16a34a' : 'var(--warn)';
-    }
-    cell.appendChild(clubLblEl);
-
     var btnsDiv = document.createElement('div');
     btnsDiv.className = 'bj-cell-btns';
     SN_MEMBERS.forEach(function(mem, idx) {
@@ -944,12 +930,27 @@ function bjRenderCal() {
       var entry = BJ.queued[fullKey];
       var isSubmitted = entry && entry.submitted;
       var isActive = !!entry;
+
+      var rowDiv = document.createElement('div');
+      rowDiv.className = 'bj-mem-row';
+
       var btn = document.createElement('button');
       btn.className = 'bj-btn' + (isSubmitted ? ' done' : isActive ? ' q' : '');
       btn.textContent = isSubmitted ? '✓' : (idx+1)+'번';
       btn.title = mem.name;
       btn.onclick = (function(fk, mid){ return function(){ bjToggle(fk, mid); }; })(fullKey, mem.id);
-      btnsDiv.appendChild(btn);
+      rowDiv.appendChild(btn);
+
+      if (isActive && entry.c1 && CLUB[entry.c1]) {
+        var clubShort = CLUB[entry.c1].name.replace(/CC$|GR$/, '').trim();
+        var lblEl = document.createElement('span');
+        lblEl.className = 'bj-mem-club';
+        lblEl.textContent = clubShort;
+        lblEl.style.color = isSubmitted ? '#16a34a' : 'var(--warn)';
+        rowDiv.appendChild(lblEl);
+      }
+
+      btnsDiv.appendChild(rowDiv);
     });
     cell.appendChild(btnsDiv);
 
