@@ -847,7 +847,7 @@ const SN_MEMBERS = [
   {id:'m2', name:'2에스케이브로드밴드'},
   {id:'m3', name:'3에스케이브로드밴드'},
 ];
-const SN_CLUBS = ['sn','gh','sa','wh','ev'];
+const SN_CLUBS = ['sn','gh','sa']; // 사전접수 대상: 리베라/그린힐/신안 3개만
 const BJ_TIMES = ['06','07','08','09','10','12','13','14'];
 
 // 배정예약 상태
@@ -935,9 +935,9 @@ function bjToggle(dk) {
     var cnt = Object.keys(BJ.queued).length;
     BJ.queued[dk] = {
       member: SN_MEMBERS[cnt % 3].id,
-      club: 'sn',
+      c1: 'sn', c2: 'gh', c3: 'sa',
       timeS: '09', timeE: '12',
-      course: '', remark: ''
+      remark: ''
     };
   }
   bjSave();
@@ -999,8 +999,14 @@ function bjRenderRightPanel() {
       var memOpts = SN_MEMBERS.map(function(m) {
         return '<option value="'+m.id+'"'+(m.id===item.member?' selected':'')+'>'+m.name+'</option>';
       }).join('');
-      var clubOpts = SN_CLUBS.map(function(c) {
-        return '<option value="'+c+'"'+(c===item.club?' selected':'')+'>'+CLUB[c].name+'</option>';
+      var c1Opts = SN_CLUBS.map(function(c) {
+        return '<option value="'+c+'"'+(c===item.c1?' selected':'')+'>'+CLUB[c].name+'</option>';
+      }).join('');
+      var c2Opts = '<option value=""'+(!item.c2?' selected':'')+'>없음</option>' + SN_CLUBS.map(function(c) {
+        return '<option value="'+c+'"'+(c===item.c2?' selected':'')+'>'+CLUB[c].name+'</option>';
+      }).join('');
+      var c3Opts = '<option value=""'+(!item.c3?' selected':'')+'>없음</option>' + SN_CLUBS.map(function(c) {
+        return '<option value="'+c+'"'+(c===item.c3?' selected':'')+'>'+CLUB[c].name+'</option>';
       }).join('');
       var tsOpts = BJ_TIMES.map(function(t) {
         return '<option value="'+t+'"'+(t===item.timeS?' selected':'')+'>'+t+'시</option>';
@@ -1008,25 +1014,25 @@ function bjRenderRightPanel() {
       var teOpts = BJ_TIMES.map(function(t) {
         return '<option value="'+t+'"'+(t===item.timeE?' selected':'')+'>'+t+'시</option>';
       }).join('');
-      var courseOpts = '<option value="">전체</option>' + (COURSES[item.club]||[]).map(function(c) {
-        return '<option value="'+c+'"'+(c===item.course?' selected':'')+'>'+c+'</option>';
-      }).join('');
 
       html += '<div class="bj-q-item">'
         + '<div class="bj-q-top"><span class="bj-q-date">'+dl+'</span>'
         + '<button class="bj-q-rm" onclick="bjRmQ(\''+dk+'\')">×</button></div>'
         + '<div class="bj-q-fields">'
         + '<div class="bj-q-fl"><label>회원</label><select onchange="bjUpdQ(\''+dk+'\',\'member\',this.value)">'+memOpts+'</select></div>'
-        + '<div class="bj-q-fl"><label>골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'club\',this.value);bjRenderRightPanel()">'+clubOpts+'</select></div>'
+        + '<div class="bj-q-fl"><label>1순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c1\',this.value)">'+c1Opts+'</select></div>'
         + '</div>'
         + '<div class="bj-q-fields">'
-        + '<div class="bj-q-fl"><label>희망코스</label><select onchange="bjUpdQ(\''+dk+'\',\'course\',this.value)">'+courseOpts+'</select></div>'
-        + '<div class="bj-q-fl"><label>희망시간</label>'
+        + '<div class="bj-q-fl"><label>2순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c2\',this.value)">'+c2Opts+'</select></div>'
+        + '<div class="bj-q-fl"><label>3순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c3\',this.value)">'+c3Opts+'</select></div>'
+        + '</div>'
+        + '<div class="bj-q-fields">'
+        + '<div class="bj-q-fl"><label>시작시간</label>'
         + '<select onchange="bjUpdQ(\''+dk+'\',\'timeS\',this.value)">'+tsOpts+'</select></div>'
-        + '</div>'
-        + '<div class="bj-q-fields">'
         + '<div class="bj-q-fl"><label>종료시간</label>'
         + '<select onchange="bjUpdQ(\''+dk+'\',\'timeE\',this.value)">'+teOpts+'</select></div>'
+        + '</div>'
+        + '<div class="bj-q-fields" style="grid-template-columns:1fr">'
         + '<div class="bj-q-fl"><label>비고</label>'
         + '<input type="text" value="'+item.remark+'" placeholder="메모..." maxlength="30" onchange="bjUpdQ(\''+dk+'\',\'remark\',this.value)"></div>'
         + '</div>'
@@ -1074,7 +1080,11 @@ async function bjSubmitAll() {
   var summary = qKeys.map(function(dk) {
     var it = BJ.queued[dk];
     var p = dk.split('-');
-    return p[0]+'.'+pad2(parseInt(p[1]))+'.'+pad2(parseInt(p[2]))+' '+CLUB[it.club].name+' '+it.timeS+'~'+it.timeE+'시'+(it.course?' '+it.course:'')+(it.remark?' ['+it.remark+']':'');
+    var cLabel = (CLUB[it.c1]?CLUB[it.c1].name:it.c1)
+      +(it.c2&&CLUB[it.c2]?' > '+CLUB[it.c2].name:'')
+      +(it.c3&&CLUB[it.c3]?' > '+CLUB[it.c3].name:'');
+    var mem = SN_MEMBERS.find(function(m){return m.id===it.member;});
+    return p[0]+'.'+pad2(parseInt(p[1]))+'.'+pad2(parseInt(p[2]))+' ['+(mem?mem.name:'')+'] '+cLabel+' '+it.timeS+'~'+it.timeE+'시'+(it.remark?' ['+it.remark+']':'');
   }).join('\n');
 
   if (!confirm(qKeys.length+'건을 접수 대기 등록하시겠습니까?\n오픈일('+openDate+') '+openTime+'에 자동 접수됩니다.\n\n'+summary)) return;
@@ -1090,16 +1100,19 @@ async function bjSubmitAll() {
     var date = parts[0]+'-'+pad2(parseInt(parts[1]))+'-'+pad2(parseInt(parts[2]));
     var mem = SN_MEMBERS.find(function(m){return m.id===it.member;});
     try {
+      var cLabel = (CLUB[it.c1]?CLUB[it.c1].name:it.c1)
+        +(it.c2&&CLUB[it.c2]?'>'+CLUB[it.c2].name:'')
+        +(it.c3&&CLUB[it.c3]?'>'+CLUB[it.c3].name:'');
       await api('/api/bookings', { method:'POST', body:{
-        club: it.club,
-        course: it.course || '',
+        club: it.c1 || 'sn',
+        course: '',
         date: date,
         time: it.timeS + ':00',
         timeFrom: it.timeS + ':00',
         timeTo: it.timeE + ':00',
         openDate: openDate,
         openTime: openTime,
-        memo: '[배정예약] '+(mem?mem.name:'')+(it.remark?' · '+it.remark:''),
+        memo: '[배정예약] '+(mem?mem.name:'')+' '+cLabel+(it.remark?' · '+it.remark:''),
         enableWaitlist: false,
         waitlistUntil: '',
       }});
