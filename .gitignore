@@ -1,4 +1,9 @@
 node_modules/
 .env
-.env.local
+.env.*
 .vercel
+_captcha_debug.bmp
+_layer_debug.html
+_times_debug.html
+_sinan_save_debug_*.html
+*.traineddata

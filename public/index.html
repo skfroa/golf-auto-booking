@@ -1117,77 +1117,106 @@ function updateBjBadge() {
   if (el) el.textContent = cnt;
 }
 
+var _bjOtpTimer = null;
+var _bjOtpItems = [];
+var _bjOtpBtn = null;
+
 async function bjSubmitAll() {
-  var qKeys = Object.keys(BJ.queued).sort();
-  if (!qKeys.length) { toast('⚠️ 접수할 날짜를 먼저 선택해 주세요'); return; }
+  var allKeys = Object.keys(BJ.queued).filter(function(dk){ return !BJ.queued[dk].submitted; }).sort();
+  if (!allKeys.length) { toast('⚠️ 접수할 날짜를 먼저 선택해 주세요'); return; }
 
-  var openDateEl = document.getElementById('bj-open-date');
-  var openTimeEl = document.getElementById('bj-open-time');
-  var openDate = openDateEl ? openDateEl.value : '';
-  var openTime = openTimeEl ? openTimeEl.value : '09:00';
-  if (!openDate) { toast('⚠️ 배정 오픈일을 입력해 주세요'); return; }
-
-  var summary = qKeys.map(function(dk) {
+  var summary = allKeys.map(function(dk) {
     var it = BJ.queued[dk];
-    var p = dk.split('-'); // YYYY-M-D-mX
+    var p = dk.split('-');
     var cLabel = (CLUB[it.c1]?CLUB[it.c1].name:it.c1)
       +(it.c2&&CLUB[it.c2]?' > '+CLUB[it.c2].name:'')
       +(it.c3&&CLUB[it.c3]?' > '+CLUB[it.c3].name:'');
     var mem = SN_MEMBERS.find(function(m){return m.id===p[3];});
-    return p[0]+'.'+pad2(parseInt(p[1]))+'.'+pad2(parseInt(p[2]))+' ['+(mem?mem.name:p[3]||'')+'] '+cLabel+' '+it.timeS+'~'+it.timeE+'시'+(it.remark?' ['+it.remark+']':'');
+    return p[0]+'.'+pad2(parseInt(p[1]))+'.'+pad2(parseInt(p[2]))+' ['+(mem?mem.name:p[3]||'')+'] '+cLabel+' '+it.timeS+'~'+it.timeE+'시';
   }).join('\n');
 
-  if (!confirm(qKeys.length+'건을 접수 대기 등록하시겠습니까?\n오픈일('+openDate+') '+openTime+'에 자동 접수됩니다.\n\n'+summary)) return;
+  if (!confirm(allKeys.length+'건을 신안골프에 사전접수하시겠습니까?\n(SMS 인증번호 입력이 필요합니다)\n\n'+summary)) return;
 
   var btn = document.querySelector('.bj-submit');
-  if (btn) { btn.disabled=true; btn.textContent='등록 중...'; }
+  if (btn) { btn.disabled=true; btn.textContent='OTP 발송 중...'; }
+  _bjOtpBtn = btn;
 
-  var failed = 0;
-  var successKeys = [];
-  // submitted 항목 제외하고 pending만 접수
-  qKeys = qKeys.filter(function(dk){ return !BJ.queued[dk].submitted; });
-  for (var i = 0; i < qKeys.length; i++) {
-    var dk = qKeys[i];
-    var it = BJ.queued[dk];
-    var parts = dk.split('-'); // YYYY-M-D-mX
-    var date = parts[0]+'-'+pad2(parseInt(parts[1]))+'-'+pad2(parseInt(parts[2]));
-    var mem = SN_MEMBERS.find(function(m){return m.id===parts[3];});
-    try {
-      var cLabel = (CLUB[it.c1]?CLUB[it.c1].name:it.c1)
-        +(it.c2&&CLUB[it.c2]?'>'+CLUB[it.c2].name:'')
-        +(it.c3&&CLUB[it.c3]?'>'+CLUB[it.c3].name:'');
-      await api('/api/bookings', { method:'POST', body:{
-        club: it.c1 || 'sn',
-        course: '',
-        date: date,
-        time: it.timeS + ':00',
-        timeFrom: it.timeS + ':00',
-        timeTo: it.timeE + ':00',
-        openDate: openDate,
-        openTime: openTime,
-        memo: '[배정예약] '+(mem?mem.name:'')+' '+cLabel+(it.remark?' · '+it.remark:''),
-        enableWaitlist: false,
-        waitlistUntil: '',
-      }});
-      successKeys.push(dk);
-    } catch(e) { failed++; }
-  }
-
-  if (successKeys.length > 0) {
-    successKeys.forEach(function(dk) {
-      if (BJ.queued[dk]) BJ.queued[dk].submitted = true;
+  try {
+    var res = await api('/api/sinan-baejung', { method:'POST', body:{ action:'request-otp' } });
+    _bjOtpItems = allKeys.map(function(dk) {
+      var it = BJ.queued[dk];
+      var p = dk.split('-');
+      var date = p[0]+'-'+pad2(parseInt(p[1]))+'-'+pad2(parseInt(p[2]));
+      return { key:dk, date:date, member:p[3], c1:it.c1, c2:it.c2, c3:it.c3, timeS:it.timeS, timeE:it.timeE };
     });
-    bjSave();
-    bjRenderCal();
-    bjRenderRightPanel();
-    updateBjBadge();
+    bjShowOtpModal(res.expire || 180);
+  } catch(e) {
+    toast('❌ OTP 발송 실패: '+e.message);
+    if (btn) { btn.disabled=false; bjRenderRightPanel(); }
   }
-  if (failed === 0) {
-    toast('✅ '+successKeys.length+'건 접수 대기 등록 완료!');
-  } else {
-    toast('⚠️ '+failed+'건 등록 실패 ('+successKeys.length+'건 성공)');
+}
+
+function bjShowOtpModal(expire) {
+  var modal = document.getElementById('otp-modal');
+  if (!modal) return;
+  modal.style.display = 'flex';
+  var timerEl = document.getElementById('otp-timer');
+  var secs = expire;
+  if (timerEl) timerEl.textContent = secs;
+  _bjOtpTimer = setInterval(function() {
+    secs--;
+    if (timerEl) timerEl.textContent = secs;
+    if (secs <= 0) {
+      clearInterval(_bjOtpTimer);
+      bjOtpCancel();
+      toast('⏱ 인증 시간이 초과되었습니다. 다시 시도해 주세요.');
+    }
+  }, 1000);
+  var input = document.getElementById('otp-input');
+  if (input) { input.value=''; setTimeout(function(){input.focus();},100); }
+}
+
+function bjOtpCancel() {
+  if (_bjOtpTimer) { clearInterval(_bjOtpTimer); _bjOtpTimer=null; }
+  var modal = document.getElementById('otp-modal');
+  if (modal) modal.style.display = 'none';
+  if (_bjOtpBtn) { _bjOtpBtn.disabled=false; bjRenderRightPanel(); }
+}
+
+async function bjOtpConfirm() {
+  var input = document.getElementById('otp-input');
+  var otp = input ? input.value.replace(/[^0-9]/g,'').substring(0,6) : '';
+  if (otp.length !== 6) { toast('⚠️ 6자리 인증번호를 입력해 주세요'); return; }
+
+  if (_bjOtpTimer) { clearInterval(_bjOtpTimer); _bjOtpTimer=null; }
+  var modal = document.getElementById('otp-modal');
+  if (modal) modal.style.display = 'none';
+
+  var btn = document.getElementById('otp-confirm-btn');
+  if (btn) { btn.disabled=true; btn.textContent='접수 중...'; }
+  if (_bjOtpBtn) { _bjOtpBtn.textContent='접수 중...'; }
+
+  try {
+    var res = await api('/api/sinan-baejung', { method:'POST', body:{ action:'submit', otp:otp, items:_bjOtpItems } });
+    var successKeys = [], failed = 0;
+    (res.results || []).forEach(function(r) {
+      if (r.success) { successKeys.push(r.key); }
+      else { failed++; console.warn('[사전접수 실패]', r.key, r.error); }
+    });
+    if (successKeys.length > 0) {
+      successKeys.forEach(function(dk){ if (BJ.queued[dk]) BJ.queued[dk].submitted=true; });
+      bjSave(); bjRenderCal(); bjRenderRightPanel(); updateBjBadge();
+    }
+    if (failed === 0) {
+      toast('✅ '+successKeys.length+'건 신안골프 사전접수 완료!');
+    } else {
+      toast('⚠️ '+failed+'건 실패, '+successKeys.length+'건 접수 완료');
+    }
+  } catch(e) {
+    toast('❌ 접수 오류: '+e.message);
   }
-  if (btn) { btn.disabled=false; btn.textContent='📤 접수 대기 등록'; }
+  if (_bjOtpBtn) { _bjOtpBtn.disabled=false; bjRenderRightPanel(); }
+  if (btn) { btn.disabled=false; btn.textContent='확인'; }
 }
 
 function pad2(n) { return n < 10 ? '0'+n : ''+n; }
@@ -1210,5 +1239,21 @@ function pad2(n) { return n < 10 ? '0'+n : ''+n; }
   setInterval(loadDashboard, 60000);
 })();
 </script>
+
+<!-- OTP 인증 모달 -->
+<div id="otp-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:2000;align-items:center;justify-content:center;">
+  <div style="background:var(--bg);border-radius:14px;padding:28px 24px;width:320px;max-width:92vw;box-shadow:0 8px 32px rgba(0,0,0,.3);">
+    <div style="font-size:17px;font-weight:700;margin-bottom:6px;">📱 SMS 인증번호 입력</div>
+    <div style="font-size:13px;color:var(--fg2);margin-bottom:4px;">010-5313-8084으로 발송된 인증번호를 입력하세요.</div>
+    <div style="font-size:12px;color:var(--warn);margin-bottom:16px;">⏱ 남은 시간: <span id="otp-timer">180</span>초</div>
+    <input id="otp-input" type="tel" inputmode="numeric" maxlength="6" placeholder="인증번호 6자리"
+      style="width:100%;box-sizing:border-box;padding:13px;border:1.5px solid var(--border);border-radius:9px;font-size:22px;text-align:center;letter-spacing:10px;background:var(--bg);color:var(--fg);outline:none;"
+      onkeydown="if(event.key==='Enter')bjOtpConfirm()">
+    <div style="display:flex;gap:10px;margin-top:16px;">
+      <button onclick="bjOtpCancel()" style="flex:1;padding:12px;border:1.5px solid var(--border);border-radius:9px;background:transparent;color:var(--fg);font-size:14px;cursor:pointer;">취소</button>
+      <button id="otp-confirm-btn" onclick="bjOtpConfirm()" style="flex:2;padding:12px;background:var(--indigo);color:#fff;border:none;border-radius:9px;font-size:14px;font-weight:700;cursor:pointer;">확인</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
