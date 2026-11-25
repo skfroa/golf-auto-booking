@@ -182,6 +182,8 @@ select.fi{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns=
 .bj-btn{width:100%;padding:4px 0;border:none;border-radius:3px;background:var(--indigo);color:#fff;font-size:10px;font-weight:600;cursor:pointer;font-family:inherit;}
 .bj-btn:hover{opacity:.85;}
 .bj-btn.q{background:var(--warn);}
+.bj-cell-btns{display:flex;gap:2px;width:100%;}
+.bj-cell-btns .bj-btn{flex:1;font-size:9px;padding:3px 1px;}
 .bj-cell.empty,.bj-cell.na{background:var(--surface2);}
 .bj-cell.na .bj-na{font-size:10px;color:var(--fg3);}
 
@@ -911,7 +913,6 @@ function bjRenderCal() {
     var dow = (firstDay + d - 1) % 7;
     var dk = y+'-'+m+'-'+d;
     var cell = document.createElement('div');
-    var isQ = !!BJ.queued[dk];
     cell.className = 'bj-cell';
 
     var dnEl = document.createElement('div');
@@ -919,23 +920,30 @@ function bjRenderCal() {
     dnEl.textContent = d;
     cell.appendChild(dnEl);
 
-    var btn = document.createElement('button');
-    btn.className = 'bj-btn' + (isQ?' q':'');
-    btn.textContent = isQ ? '접수대기' : '사전접수';
-    btn.onclick = (function(dk2){ return function(){ bjToggle(dk2); }; })(dk);
-    cell.appendChild(btn);
+    var btnsDiv = document.createElement('div');
+    btnsDiv.className = 'bj-cell-btns';
+    SN_MEMBERS.forEach(function(mem, idx) {
+      var fullKey = dk + '-' + mem.id;
+      var isActive = !!BJ.queued[fullKey];
+      var btn = document.createElement('button');
+      btn.className = 'bj-btn' + (isActive ? ' q' : '');
+      btn.textContent = (idx+1) + '번';
+      btn.title = mem.name;
+      btn.onclick = (function(fk, mid){ return function(){ bjToggle(fk, mid); }; })(fullKey, mem.id);
+      btnsDiv.appendChild(btn);
+    });
+    cell.appendChild(btnsDiv);
 
     grid.appendChild(cell);
   }
 }
 
-function bjToggle(dk) {
-  if (BJ.queued[dk]) { delete BJ.queued[dk]; }
+function bjToggle(fullKey, memberId) {
+  if (BJ.queued[fullKey]) { delete BJ.queued[fullKey]; }
   else {
-    var cnt = Object.keys(BJ.queued).length;
-    BJ.queued[dk] = {
-      member: SN_MEMBERS[cnt % 3].id,
-      c1: 'sn', c2: 'gh', c3: 'sa',
+    BJ.queued[fullKey] = {
+      member: memberId,
+      c1: 'sn', c2: 'sa', c3: 'gh',
       timeS: '09', timeE: '12',
       remark: ''
     };
@@ -996,9 +1004,9 @@ function bjRenderRightPanel() {
       var dow = new Date(parseInt(p[0]), parseInt(p[1])-1, parseInt(p[2])).getDay();
       var dl = p[0]+'.'+pad2(parseInt(p[1]))+'.'+pad2(parseInt(p[2]))+' ('+DOW_KO[dow]+')';
 
-      var memOpts = SN_MEMBERS.map(function(m) {
-        return '<option value="'+m.id+'"'+(m.id===item.member?' selected':'')+'>'+m.name+'</option>';
-      }).join('');
+      // key: YYYY-M-D-mX → p[3] = memberId
+      var memberParts = dk.split('-');
+      var memObj = SN_MEMBERS.find(function(m){return m.id===memberParts[3];}) || {name:memberParts[3]||''};
       var c1Opts = SN_CLUBS.map(function(c) {
         return '<option value="'+c+'"'+(c===item.c1?' selected':'')+'>'+CLUB[c].name+'</option>';
       }).join('');
@@ -1016,21 +1024,21 @@ function bjRenderRightPanel() {
       }).join('');
 
       html += '<div class="bj-q-item">'
-        + '<div class="bj-q-top"><span class="bj-q-date">'+dl+'</span>'
+        + '<div class="bj-q-top">'
+        + '<span class="bj-q-date">'+dl+'</span>'
+        + '<span style="font-size:11px;font-weight:700;color:var(--indigo);margin-left:6px;">'+memObj.name+'</span>'
         + '<button class="bj-q-rm" onclick="bjRmQ(\''+dk+'\')">×</button></div>'
         + '<div class="bj-q-fields">'
-        + '<div class="bj-q-fl"><label>회원</label><select onchange="bjUpdQ(\''+dk+'\',\'member\',this.value)">'+memOpts+'</select></div>'
         + '<div class="bj-q-fl"><label>1순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c1\',this.value)">'+c1Opts+'</select></div>'
-        + '</div>'
-        + '<div class="bj-q-fields">'
         + '<div class="bj-q-fl"><label>2순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c2\',this.value)">'+c2Opts+'</select></div>'
-        + '<div class="bj-q-fl"><label>3순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c3\',this.value)">'+c3Opts+'</select></div>'
         + '</div>'
         + '<div class="bj-q-fields">'
-        + '<div class="bj-q-fl"><label>시작시간</label>'
-        + '<select onchange="bjUpdQ(\''+dk+'\',\'timeS\',this.value)">'+tsOpts+'</select></div>'
-        + '<div class="bj-q-fl"><label>종료시간</label>'
-        + '<select onchange="bjUpdQ(\''+dk+'\',\'timeE\',this.value)">'+teOpts+'</select></div>'
+        + '<div class="bj-q-fl"><label>3순위 골프장</label><select onchange="bjUpdQ(\''+dk+'\',\'c3\',this.value)">'+c3Opts+'</select></div>'
+        + '<div class="bj-q-fl"><label>시작~종료</label>'
+        + '<div style="display:flex;gap:3px;">'
+        + '<select style="flex:1;" onchange="bjUpdQ(\''+dk+'\',\'timeS\',this.value)">'+tsOpts+'</select>'
+        + '<select style="flex:1;" onchange="bjUpdQ(\''+dk+'\',\'timeE\',this.value)">'+teOpts+'</select>'
+        + '</div></div>'
         + '</div>'
         + '<div class="bj-q-fields" style="grid-template-columns:1fr">'
         + '<div class="bj-q-fl"><label>비고</label>'
@@ -1079,12 +1087,12 @@ async function bjSubmitAll() {
 
   var summary = qKeys.map(function(dk) {
     var it = BJ.queued[dk];
-    var p = dk.split('-');
+    var p = dk.split('-'); // YYYY-M-D-mX
     var cLabel = (CLUB[it.c1]?CLUB[it.c1].name:it.c1)
       +(it.c2&&CLUB[it.c2]?' > '+CLUB[it.c2].name:'')
       +(it.c3&&CLUB[it.c3]?' > '+CLUB[it.c3].name:'');
-    var mem = SN_MEMBERS.find(function(m){return m.id===it.member;});
-    return p[0]+'.'+pad2(parseInt(p[1]))+'.'+pad2(parseInt(p[2]))+' ['+(mem?mem.name:'')+'] '+cLabel+' '+it.timeS+'~'+it.timeE+'시'+(it.remark?' ['+it.remark+']':'');
+    var mem = SN_MEMBERS.find(function(m){return m.id===p[3];});
+    return p[0]+'.'+pad2(parseInt(p[1]))+'.'+pad2(parseInt(p[2]))+' ['+(mem?mem.name:p[3]||'')+'] '+cLabel+' '+it.timeS+'~'+it.timeE+'시'+(it.remark?' ['+it.remark+']':'');
   }).join('\n');
 
   if (!confirm(qKeys.length+'건을 접수 대기 등록하시겠습니까?\n오픈일('+openDate+') '+openTime+'에 자동 접수됩니다.\n\n'+summary)) return;
@@ -1096,9 +1104,9 @@ async function bjSubmitAll() {
   for (var i = 0; i < qKeys.length; i++) {
     var dk = qKeys[i];
     var it = BJ.queued[dk];
-    var parts = dk.split('-');
+    var parts = dk.split('-'); // YYYY-M-D-mX
     var date = parts[0]+'-'+pad2(parseInt(parts[1]))+'-'+pad2(parseInt(parts[2]));
-    var mem = SN_MEMBERS.find(function(m){return m.id===it.member;});
+    var mem = SN_MEMBERS.find(function(m){return m.id===parts[3];});
     try {
       var cLabel = (CLUB[it.c1]?CLUB[it.c1].name:it.c1)
         +(it.c2&&CLUB[it.c2]?'>'+CLUB[it.c2].name:'')
